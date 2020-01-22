@@ -64,6 +64,13 @@ namespace GLCore::Utils {
 		shader->LoadFromGLSLTextFiles(vertexShaderPath, fragmentShaderPath);
 		return shader;
 	}
+
+	Shader *Shader::FromGLSLTextFiles(const std::string &vertexShaderPath, const std::string &geometryShaderPath, const std::string &fragmentShaderPath)
+	{
+		Shader *shader = new Shader();
+		shader->LoadFromGLSLTextFiles(vertexShaderPath, geometryShaderPath, fragmentShaderPath);
+		return shader;
+	}
 	
 	void Shader::LoadFromGLSLTextFiles(const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
 	{
@@ -75,13 +82,47 @@ namespace GLCore::Utils {
 			
 		GLuint vertexShader = CompileShader(GL_VERTEX_SHADER, vertexSource);
 		glAttachShader(program, vertexShader);
+
 		GLuint fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentSource);
 		glAttachShader(program, fragmentShader);
+
+		LinkProgram(program);
+		m_RendererID = program;
+	}
+	void Shader::LoadFromGLSLTextFiles(
+		const std::string &vertexShaderPath, 
+		const std::string &geometryShaderPath, 
+		const std::string &fragmentShaderPath)
+	{
+
+		std::string vertexSource = ReadFileAsString(vertexShaderPath);
+		std::string geometrySource = ReadFileAsString(geometryShaderPath);
+		std::string fragmentSource = ReadFileAsString(fragmentShaderPath);
+
+		GLuint program = glCreateProgram();
+		int glShaderIDIndex = 0;
+
+		GLuint vertexShader = CompileShader(GL_VERTEX_SHADER, vertexSource);
+		glAttachShader(program, vertexShader);
+
+		GLuint geometryShader = CompileShader(GL_GEOMETRY_SHADER, geometrySource);
+		glAttachShader(program, geometryShader);
+
+		GLuint fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentSource);
+		glAttachShader(program, fragmentShader);
+
+		LinkProgram(program);
+		m_RendererID = program;
+
+	}
+
+	void Shader::LinkProgram(GLuint program)
+	{
 
 		glLinkProgram(program);
 
 		GLint isLinked = 0;
-		glGetProgramiv(program, GL_LINK_STATUS, (int*)&isLinked);
+		glGetProgramiv(program, GL_LINK_STATUS, (int *)&isLinked);
 		if (isLinked == GL_FALSE)
 		{
 			GLint maxLength = 0;
@@ -90,21 +131,32 @@ namespace GLCore::Utils {
 			std::vector<GLchar> infoLog(maxLength);
 			glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
 
+			ReleaseShaders(program);
 			glDeleteProgram(program);
-
-			glDeleteShader(vertexShader);
-			glDeleteShader(fragmentShader);
 
 			LOG_ERROR("{0}", infoLog.data());
 			// HZ_CORE_ASSERT(false, "Shader link failure!");
 		}
-		
-		glDetachShader(program, vertexShader);
-		glDetachShader(program, fragmentShader);
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
 
-		m_RendererID = program;
+		ReleaseShaders(program);
+
 	}
+	void Shader::ReleaseShaders(GLuint program)
+	{
 
+		GLint shaderCount = 0;
+		glGetProgramiv(program, GL_ATTACHED_SHADERS, &shaderCount);
+
+		GLuint *shaders = new GLuint[shaderCount];
+		glGetAttachedShaders(program, shaderCount, nullptr, shaders);
+
+		for (int i = 0; i < shaderCount; ++i)
+		{
+			glDetachShader(program, shaders[i]);
+			glDeleteShader(shaders[i]);
+		}
+
+		delete[] shaders;
+
+	}
 }
