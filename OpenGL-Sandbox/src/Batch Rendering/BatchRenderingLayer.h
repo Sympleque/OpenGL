@@ -3,11 +3,11 @@
 #include <GLCore.h>
 #include <GLCoreUtils.h>
 
-class SandboxLayer : public GLCore::Layer
+class BatchRenderingLayer : public GLCore::Layer
 {
 public:
-	SandboxLayer();
-	virtual ~SandboxLayer();
+	BatchRenderingLayer();
+	virtual ~BatchRenderingLayer();
 
 	virtual void OnAttach() override;
 	virtual void OnDetach() override;
@@ -15,4 +15,6 @@ public:
 	virtual void OnUpdate(GLCore::Timestep ts) override;
 	virtual void OnImGuiRender() override;
 private:
+	GLCore::Utils::OrthographicCameraController m_Camera;
+
 };
